@@ -6,6 +6,6 @@ https://elasticsearch.cn/explore
 
 设置deploy key
 
-idea配置git
+idea配置git,配置环境变量
 ##工具
 https://git-scm.com/download
