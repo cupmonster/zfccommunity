@@ -12,7 +12,9 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
@@ -31,29 +33,28 @@ public class AuthorizeController {
     @RequestMapping("/callback")     //如果路径中有/callback则拦截执行此方法
     public String callBack(@RequestParam(name = "code") String code,
                            @RequestParam(name = "state") String state,
-                           HttpServletRequest request) throws IOException {
+                           HttpServletRequest request,
+                           HttpServletResponse response) throws IOException {
         //获取两个参数，并把所有已知的参数封装进accessTokenDto对象中
         AccessTokenDto accessTokenDto=new AccessTokenDto();
         accessTokenDto.setClient_id(clientId);
         accessTokenDto.setState(state);
         accessTokenDto.setClient_secret(clientSecret);
         accessTokenDto.setCode(code);
-        accessTokenDto.setRedirect_uri(redirectUri);
-                      //调用githubProvider中的方法，访问https://github.com/login/oauth/access_token
-                       //并且携带accessTokenDto中的所有参数，获取response中的内容accessToken
-        String accessToken=githubProvider.getAccessToken(accessTokenDto);
-                     //githubProvider对象调用getUser方法，访问"https://api.github.com/user?access_token="+accessToken
-                        //从response对象中获取githubUser对象中的参数name/id/bio
+        accessTokenDto.setRedirect_uri(redirectUri);//调用githubProvider中的方法，访问https://github.com/login/oauth/access_token,并且携带accessTokenDto中的所有参数，获取response中的内容accessToken
+        String accessToken=githubProvider.getAccessToken(accessTokenDto);//githubProvider对象调用getUser方法，访问"https://api.github.com/user?access_token="+accessToken,从response对象中获取githubUser对象中的参数name/id/bio
         GithubUser githubUser=githubProvider.getUser(accessToken);
         if (githubUser!=null){
             User user = new User();
-            user.setToken(UUID.randomUUID().toString());
+            String token = UUID.randomUUID().toString();
+            user.setToken(token);
             user.setAccountId(String.valueOf(githubUser.getId()));
             user.setName(githubUser.getName());
             user.setGmtCreate(System.currentTimeMillis());
             user.setGmtModified(user.getGmtCreate());
             (new Mybatis()).retainUserInformation(user);
-            request.getSession().setAttribute("user",githubUser);
+            response.addCookie(new Cookie("token",token));
+            //request.getSession().setAttribute("user",githubUser);
             return "redirect:/";
         }else{
             return "redirect:/";
